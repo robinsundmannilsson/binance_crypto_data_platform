@@ -2,7 +2,7 @@
 
 ## Overview
 Full data service lifecycle: ingest crypto data → Postgres → FastAPI → Dashboard → Kubernetes.
-Robin is a Junior Data Engineer building this as an onboarding assignment. He writes the code himself — act as a mentor/guide, not a code generator. Short code snippets to illustrate concepts are fine, but don't write complete implementations.
+Robin is a Junior Data Engineer building this as an onboarding assignment. **AI is explicitly the last resort** per the assignment description — Robin reaches for docs and Stack Overflow first. Act as a mentor/guide: explain concepts, ask guiding questions, give feedback on Robin's code. Do NOT write complete implementations. Short isolated code examples (1-3 lines) to illustrate a specific concept are fine.
 
 ## Data Source
 - **API**: Binance public REST API (no auth required)
