@@ -1,20 +1,22 @@
 
 import os
-from dotenv import load_dotenv
 import requests
 from datetime import datetime, timezone
 from decimal import Decimal
+from dotenv import load_dotenv
+import psycopg2
 
 load_dotenv()
 
 symbols = os.getenv("SYMBOLS").split(",")
 interval = os.getenv("INTERVAL")
 start_date = os.getenv("START_DATE")
+db_host= os.getenv("DB_HOST")
+db_name= os.getenv("DB_NAME")
+db_user= os.getenv("DB_USER")
+db_port= os.getenv("DB_PORT")
 
 BASE_URL = "https://api.binance.com/api/v3/klines"
-
-start = datetime.strptime(start_date, "%Y-%m-%d").replace(tzinfo=timezone.utc)
-start_ms = int(start.timestamp() * 1000)
 
 def parse_candle(raw: list, symbol: str) -> dict:
     return {
@@ -28,6 +30,25 @@ def parse_candle(raw: list, symbol: str) -> dict:
         "number_of_trades": int(raw[8])
     }
 
+def get_connection():
+    conn = psycopg2.connect(
+        dbname=db_name,
+        user=db_user,
+        host=db_host,
+        port=db_port
+    )
+    return conn
+
+def insert_candle(cur, candle):
+    insert_query = """--sql
+    INSERT INTO crypto_weekly_candles
+    (symbol, open_time, open_price, high_price, low_price, close_price, volume, number_of_trades)
+    VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+    """
+
+start = datetime.strptime(start_date, "%Y-%m-%d").replace(tzinfo=timezone.utc)
+start_ms = int(start.timestamp() * 1000)
+
 params = {
     "interval": interval,
     "startTime": start_ms,
@@ -39,3 +60,4 @@ for symbol in symbols:
     response = requests.get(BASE_URL, params=params)
     response.raise_for_status()
     data = response.json()
+
