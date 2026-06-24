@@ -39,4 +39,3 @@ for symbol in symbols:
     response = requests.get(BASE_URL, params=params)
     response.raise_for_status()
     data = response.json()
-    print(parse_candle(data[0], symbol))
