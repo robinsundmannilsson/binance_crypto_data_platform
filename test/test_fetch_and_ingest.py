@@ -17,6 +17,12 @@ def test_parse_candle():
     assert isinstance(candle["volume"], Decimal)
     assert isinstance(candle["number_of_trades"], int)
 
+def test_parse_candle_short_raw():
+    raw = [123456789, "100.0", "200.0", "300.0", "400.0", "500.0"]
+    symbol = "BTCUSDT"
+    with pytest.raises(IndexError):
+        parse_candle(raw, symbol)    
+
 def test_open_time_utc():
     raw = [123456789, "100.0", "200.0", "300.0", "400.0", "500.0", "600.0", "700.0", 8]
     symbol = "BTCUSDT"
