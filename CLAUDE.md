@@ -51,17 +51,17 @@ src/
 - [x] `parse_candle(raw, symbol)` function — converts raw list to typed dict
 - [x] Environment variables via `.env`
 - [x] Postgres database and table created
+- [x] `get_connection()` via psycopg2
+- [x] `insert_candle(cur, candle)` with `INSERT ... ON CONFLICT DO UPDATE` upsert
+- [x] Code structured with functions and `if __name__ == "__main__":`
+- [x] Structured logging with `logging.basicConfig(level=logging.INFO)`
+- [x] Error handling for network errors with `try/except requests.RequestException`
 
 ## What's Next
-1. Connect Python to Postgres with `psycopg2`
-2. Write parsed candles to DB using `INSERT ... ON CONFLICT DO UPDATE` (upsert)
-3. Structure code properly (wrap in functions, add `if __name__ == "__main__":`)
-4. Add structured logging
-5. Add error handling (network errors, rate limits)
-6. Write pytest tests for `parse_candle`
-7. FastAPI layer
-8. Dashboard (Streamlit)
-9. Kubernetes (kind)
+1. Write pytest tests for `parse_candle`
+2. FastAPI layer
+3. Dashboard (Streamlit)
+4. Kubernetes (kind)
 
 ## Environment
 ```
