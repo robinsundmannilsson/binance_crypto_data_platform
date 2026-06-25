@@ -29,6 +29,21 @@ def get_connection():
     )
     return conn
 
+def create_table_if_not_exists(cur):
+    cur.execute("""--sql
+    CREATE TABLE IF NOT EXISTS crypto_weekly_candles (
+        symbol TEXT NOT NULL,
+        open_time TIMESTAMP WITH TIME ZONE NOT NULL,
+        open_price NUMERIC (20,8) NOT NULL,
+        high_price NUMERIC (20,8) NOT NULL,
+        low_price NUMERIC (20,8) NOT NULL,
+        close_price NUMERIC (20,8) NOT NULL,
+        volume NUMERIC (20,8) NOT NULL,
+        number_of_trades INTEGER NOT NULL,
+        PRIMARY KEY (symbol, open_time)
+    )
+    """)
+
 def parse_candle(raw: list, symbol: str) -> dict:
     return {
         "symbol": symbol,
@@ -77,6 +92,9 @@ if __name__ == "__main__":
 
     with get_connection() as conn:
         with conn.cursor() as cur:
+
+            logging.info("Creating table if it does not exist...")
+            create_table_if_not_exists(cur)
 
             for symbol in symbols:
                 params["symbol"] = symbol

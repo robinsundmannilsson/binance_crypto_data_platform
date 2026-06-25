@@ -50,18 +50,18 @@ src/
 - [x] Binance API call working, loops over all symbols
 - [x] `parse_candle(raw, symbol)` function — converts raw list to typed dict
 - [x] Environment variables via `.env`
-- [x] Postgres database and table created
 - [x] `get_connection()` via psycopg2
 - [x] `insert_candle(cur, candle)` with `INSERT ... ON CONFLICT DO UPDATE` upsert
+- [x] `create_table_if_not_exists(cur)` — creates table on startup
 - [x] Code structured with functions and `if __name__ == "__main__":`
 - [x] Structured logging with `logging.basicConfig(level=logging.INFO)`
 - [x] Error handling for network errors with `try/except requests.RequestException`
+- [x] pytest tests for `parse_candle` (types, UTC timezone, short raw)
 
 ## What's Next
-1. Write pytest tests for `parse_candle`
-2. FastAPI layer
-3. Dashboard (Streamlit)
-4. Kubernetes (kind)
+1. FastAPI layer
+2. Dashboard (Streamlit)
+3. Kubernetes (kind)
 
 ## Environment
 ```
