@@ -5,18 +5,29 @@ from datetime import datetime, timezone
 from decimal import Decimal
 from dotenv import load_dotenv
 import psycopg2
+import logging
 
 load_dotenv()
 
+base_url = os.getenv("BASE_URL")
 symbols = os.getenv("SYMBOLS").split(",")
 interval = os.getenv("INTERVAL")
 start_date = os.getenv("START_DATE")
-db_host= os.getenv("DB_HOST")
-db_name= os.getenv("DB_NAME")
-db_user= os.getenv("DB_USER")
-db_port= os.getenv("DB_PORT")
+db_host = os.getenv("DB_HOST")
+db_name = os.getenv("DB_NAME")
+db_user = os.getenv("DB_USER")
+db_port = os.getenv("DB_PORT")
 
-BASE_URL = "https://api.binance.com/api/v3/klines"
+logging.basicConfig(level=logging.INFO)
+
+def get_connection():
+    conn = psycopg2.connect(
+        dbname=db_name,
+        user=db_user,
+        host=db_host,
+        port=db_port
+    )
+    return conn
 
 def parse_candle(raw: list, symbol: str) -> dict:
     return {
@@ -30,34 +41,56 @@ def parse_candle(raw: list, symbol: str) -> dict:
         "number_of_trades": int(raw[8])
     }
 
-def get_connection():
-    conn = psycopg2.connect(
-        dbname=db_name,
-        user=db_user,
-        host=db_host,
-        port=db_port
-    )
-    return conn
-
 def insert_candle(cur, candle):
-    insert_query = """--sql
+    candle_data = (
+        candle["symbol"],
+        candle["open_time"],
+        candle["open_price"],
+        candle["high_price"],
+        candle["low_price"],
+        candle["close_price"],
+        candle["volume"],
+        candle["number_of_trades"]
+        )
+    cur.execute("""--sql
     INSERT INTO crypto_weekly_candles
     (symbol, open_time, open_price, high_price, low_price, close_price, volume, number_of_trades)
     VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
-    """
+    ON CONFLICT (symbol, open_time) DO UPDATE
+    SET open_price = EXCLUDED.open_price,
+        high_price = EXCLUDED.high_price,
+        low_price = EXCLUDED.low_price,
+        close_price = EXCLUDED.close_price,
+        volume = EXCLUDED.volume,
+        number_of_trades = EXCLUDED.number_of_trades
+    """, candle_data)
 
-start = datetime.strptime(start_date, "%Y-%m-%d").replace(tzinfo=timezone.utc)
-start_ms = int(start.timestamp() * 1000)
+if __name__ == "__main__":
+    start = datetime.strptime(start_date, "%Y-%m-%d").replace(tzinfo=timezone.utc)
+    start_ms = int(start.timestamp() * 1000)
 
-params = {
-    "interval": interval,
-    "startTime": start_ms,
-    "limit": 1000
-}
+    params = {
+        "interval": interval,
+        "startTime": start_ms,
+        "limit": 1000
+    }
 
-for symbol in symbols:
-    params["symbol"] = symbol
-    response = requests.get(BASE_URL, params=params)
-    response.raise_for_status()
-    data = response.json()
+    with get_connection() as conn:
+        with conn.cursor() as cur:
 
+            for symbol in symbols:
+                params["symbol"] = symbol
+                try:
+                    logging.info(f"Fetching data for {symbol}...")
+                    response = requests.get(base_url, params=params)
+                    response.raise_for_status()
+                    data = response.json()
+                except requests.RequestException as e:
+                    logging.error(f"Error fetching data for {symbol}: {e}")
+                    continue
+
+                for raw_candle in data:
+                    candle = parse_candle(raw_candle, symbol)
+                    insert_candle(cur, candle)
+                
+                logging.info(f"Fetched and inserted {len(data)} candles for {symbol}.")
