@@ -58,10 +58,19 @@ src/
 - [x] Error handling for network errors with `try/except requests.RequestException`
 - [x] pytest tests for `parse_candle` (types, UTC timezone, short raw)
 
+## FastAPI
+- **File**: `src/fast_api.py`
+- **Models**: `src/models.py` — `CandleResponse` (Pydantic BaseModel)
+- Uses `RealDictCursor` from psycopg2 for dict responses
+- Endpoints:
+  - `GET /health` — health check
+  - `GET /candles/{symbol}` — full price history with optional `from_date`/`to_date` query params
+  - `GET /candles/{symbol}/latest` — latest candle for a symbol
+- Run with: `uv run fastapi dev src/fast_api.py`
+
 ## What's Next
-1. FastAPI layer
-2. Dashboard (Streamlit)
-3. Kubernetes (kind)
+1. Dashboard (Streamlit)
+2. Kubernetes (kind)
 
 ## Environment
 ```
