@@ -31,7 +31,7 @@ def get_connection():
 
 def create_table_if_not_exists(cur):
     cur.execute("""--sql
-    CREATE TABLE IF NOT EXISTS crypto_weekly_candles (
+    CREATE TABLE IF NOT EXISTS crypto_daily_candles (
         symbol TEXT NOT NULL,
         open_time TIMESTAMP WITH TIME ZONE NOT NULL,
         open_price NUMERIC (20,8) NOT NULL,
@@ -68,7 +68,7 @@ def insert_candle(cur, candle):
         candle["number_of_trades"]
         )
     cur.execute("""--sql
-    INSERT INTO crypto_weekly_candles
+    INSERT INTO crypto_daily_candles
     (symbol, open_time, open_price, high_price, low_price, close_price, volume, number_of_trades)
     VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
     ON CONFLICT (symbol, open_time) DO UPDATE
