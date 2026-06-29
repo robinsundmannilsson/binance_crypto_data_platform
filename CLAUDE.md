@@ -68,9 +68,17 @@ src/
   - `GET /candles/{symbol}/latest` — latest candle for a symbol
 - Run with: `uv run fastapi dev src/fast_api.py`
 
+## Dashboard (Streamlit)
+- **File**: `src/dashboard.py`
+- Reads from FastAPI (not DB directly)
+- Sidebar with symbol selector (6 symbols with full names)
+- Binance logo via base64-encoded SVG
+- Metrics: open/high/low/close price, volume, number of trades, all-time high
+- Candlestick chart via Plotly (`go.Candlestick`)
+- Run with: `uv run streamlit run src/dashboard.py`
+
 ## What's Next
-1. Dashboard (Streamlit)
-2. Kubernetes (kind)
+1. Kubernetes (kind)
 
 ## Environment
 ```
