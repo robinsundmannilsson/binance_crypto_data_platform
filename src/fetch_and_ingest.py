@@ -98,17 +98,28 @@ if __name__ == "__main__":
 
             for symbol in symbols:
                 params["symbol"] = symbol
+                params["startTime"] = start_ms
                 try:
                     logging.info(f"Fetching data for {symbol}...")
                     response = requests.get(base_url, params=params)
                     response.raise_for_status()
-                    data = response.json()
+
+                    total = 0
+
+                    while True:
+                        page = response.json()
+                        for raw_candle in page:
+                            candle = parse_candle(raw_candle, symbol)
+                            insert_candle(cur, candle)
+                        total += len(page)
+                        if len(page) < 1000:
+                            break
+                        params["startTime"] = page[-1][0] + 1
+                        logging.info(f"Fetching next page for {symbol}...")
+                        response = requests.get(base_url, params=params)
+                        response.raise_for_status()
+
+                    logging.info(f"Done with {symbol}, {total} candles inserted.")
                 except requests.RequestException as e:
                     logging.error(f"Error fetching data for {symbol}: {e}")
                     continue
-
-                for raw_candle in data:
-                    candle = parse_candle(raw_candle, symbol)
-                    insert_candle(cur, candle)
-                
-                logging.info(f"Fetched and inserted {len(data)} candles for {symbol}.")
