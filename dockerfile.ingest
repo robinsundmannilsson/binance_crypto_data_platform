@@ -1,0 +1,9 @@
+FROM python:3.13-slim
+
+WORKDIR /app
+
+COPY src/fetch_and_ingest.py /app
+
+RUN pip install psycopg2-binary python-dotenv requests
+
+CMD ["python", "fetch_and_ingest.py"]
