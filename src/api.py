@@ -18,7 +18,7 @@ def get_candle(symbol: str, from_date: date = None, to_date: date = None):
             close_price,
             volume,
             number_of_trades
-            FROM crypto_weekly_candles
+            FROM crypto_daily_candles
             WHERE symbol = %s
             """
     params = [symbol]
@@ -48,7 +48,7 @@ def get_latest_candle(symbol: str):
                             close_price,
                             volume,
                             number_of_trades
-                        FROM crypto_weekly_candles
+                        FROM crypto_daily_candles
                         WHERE symbol = %s
                         ORDER BY open_time DESC
                         LIMIT 1
