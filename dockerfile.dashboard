@@ -1,10 +1,9 @@
 FROM python:3.13-slim
 
-WORKDIR /app/dashboard
+WORKDIR /app
 
-COPY src/dashboard.py /app/dashboard/
-COPY assets/ /app/dashboard/
-
+COPY src/dashboard.py /app
+COPY assets/ /app/assets
 RUN pip install streamlit requests pandas plotly
 
 CMD ["streamlit", "run", "dashboard.py", "--server.port=8501", "--server.address=0.0.0.0"]
