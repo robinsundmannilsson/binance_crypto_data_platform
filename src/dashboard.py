@@ -113,4 +113,4 @@ with st.container(border=True):
                     yaxis_title=f"Price ({selected_rate})",
                     xaxis_rangeslider_visible=False)
 
-    st.plotly_chart(fig, use_container_width=True)
+    st.plotly_chart(fig, width='stretch')
