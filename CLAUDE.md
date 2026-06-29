@@ -43,6 +43,13 @@ CREATE TABLE IF NOT EXISTS crypto_weekly_candles (
 ```
 src/
   fetch_and_ingest.py   # Binance API call + parse_candle function
+  api.py                # FastAPI app
+  models.py             # Pydantic response models
+  dashboard.py          # Streamlit dashboard
+dockerfile.ingest       # Docker image for ingest
+dockerfile.api          # Docker image for API
+dockerfile.dashboard    # Docker image for dashboard
+docker-compose.yml      # Orchestrerar alla services
 .env                    # Config (never commit this)
 ```
 
@@ -57,29 +64,40 @@ src/
 - [x] Structured logging with `logging.basicConfig(level=logging.INFO)`
 - [x] Error handling for network errors with `try/except requests.RequestException`
 - [x] pytest tests for `parse_candle` (types, UTC timezone, short raw)
+- [x] FastAPI med tre endpoints, Pydantic-modeller, RealDictCursor
+- [x] Streamlit dashboard med valutakonvertering och Plotly candlestick-chart
+- [x] Dockerfiles för alla tre services (ingest, api, dashboard)
+- [x] docker-compose.yml med healthcheck, volumes och service dependencies
 
 ## FastAPI
-- **File**: `src/fast_api.py`
+- **File**: `src/api.py`
 - **Models**: `src/models.py` — `CandleResponse` (Pydantic BaseModel)
 - Uses `RealDictCursor` from psycopg2 for dict responses
 - Endpoints:
   - `GET /health` — health check
   - `GET /candles/{symbol}` — full price history with optional `from_date`/`to_date` query params
   - `GET /candles/{symbol}/latest` — latest candle for a symbol
-- Run with: `uv run fastapi dev src/fast_api.py`
+- Run locally with: `uv run fastapi dev src/api.py`
 
 ## Dashboard (Streamlit)
 - **File**: `src/dashboard.py`
-- Reads from FastAPI (not DB directly)
+- Reads from FastAPI (not DB directly) via `API_BASE` env var (default: `http://localhost:8000`)
 - Sidebar with symbol selector (6 symbols with full names) and currency selector (USD/EUR/SEK/NOK/DKK)
 - Binance logo via base64-encoded SVG
 - Live currency conversion via frankfurter.app API (done at display time, not stored)
 - Metrics: open/high/low/close price, volume, number of trades, all-time high, all-time low
 - Candlestick chart via Plotly (`go.Candlestick`) with currency conversion
-- Run with: `uv run streamlit run src/dashboard.py`
+- Run locally with: `uv run streamlit run src/dashboard.py`
+
+## Docker
+- Kör hela stacken med: `docker compose up --build`
+- Postgres 18 image med named volume (`postgres_data`) för persistent data
+- `DB_HOST=postgres` sätts explicit i compose för att överskriva `.env` (localhost fungerar inte i Docker)
+- `API_BASE=http://api:8000` sätts i dockerfile.dashboard via ENV
+- Healthcheck på postgres + `condition: service_healthy` säkerställer rätt startordning
 
 ## What's Next
-1. Kubernetes (kind)
+1. Kubernetes (kind) — kind och kubectl installerade
 
 ## Environment
 Copy `.env.example` and fill in your values:
@@ -90,6 +108,7 @@ START_DATE=2000-01-01
 DB_HOST=localhost
 DB_NAME=binance_crypto_data
 DB_USER=<your_postgres_user>
+DB_PASSWORD=<your_postgres_password>
 DB_PORT=5432
 BASE_URL=https://api.binance.com/api/v3/klines
 ```
