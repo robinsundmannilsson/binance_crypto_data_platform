@@ -82,12 +82,14 @@ src/
 1. Kubernetes (kind)
 
 ## Environment
+Copy `.env.example` and fill in your values:
 ```
 SYMBOLS=BTCUSDT,ETHUSDT,XRPUSDT,SOLUSDT,LINKUSDT,ADAUSDT
-INTERVAL=1w
-START_DATE=2020-01-01
+INTERVAL=1d
+START_DATE=2000-01-01
 DB_HOST=localhost
 DB_NAME=onboarding_crypto_data
-DB_USER=YOUR_POSTGRES_USER
+DB_USER=<your_postgres_user>
 DB_PORT=5432
+BASE_URL=https://api.binance.com/api/v3/klines
 ```
