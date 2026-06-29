@@ -71,10 +71,11 @@ src/
 ## Dashboard (Streamlit)
 - **File**: `src/dashboard.py`
 - Reads from FastAPI (not DB directly)
-- Sidebar with symbol selector (6 symbols with full names)
+- Sidebar with symbol selector (6 symbols with full names) and currency selector (USD/EUR/SEK/NOK/DKK)
 - Binance logo via base64-encoded SVG
-- Metrics: open/high/low/close price, volume, number of trades, all-time high
-- Candlestick chart via Plotly (`go.Candlestick`)
+- Live currency conversion via frankfurter.app API (done at display time, not stored)
+- Metrics: open/high/low/close price, volume, number of trades, all-time high, all-time low
+- Candlestick chart via Plotly (`go.Candlestick`) with currency conversion
 - Run with: `uv run streamlit run src/dashboard.py`
 
 ## What's Next
