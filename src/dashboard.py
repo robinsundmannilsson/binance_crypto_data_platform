@@ -1,3 +1,4 @@
+import os
 import streamlit as st
 import requests
 import base64
@@ -34,10 +35,12 @@ symbol = symbols[selected_symbol]
 selected_rate = st.sidebar.selectbox("Select Exchange Rate", ["USD", "EUR", "SEK", "NOK", "DKK"], key="selected_rate")
 rate = 1.0 if selected_rate == "USD" else exchange_rates[selected_rate]
 
-latest_price_response = requests.get(f"http://localhost:8000/candles/{symbol}/latest")
+API_BASE = os.environ.get("API_BASE", "http://localhost:8000")
+
+latest_price_response = requests.get(f"{API_BASE}/candles/{symbol}/latest")
 latest_price_data = latest_price_response.json()
 
-historical_price_response = requests.get(f"http://localhost:8000/candles/{symbol}")
+historical_price_response = requests.get(f"{API_BASE}/candles/{symbol}")
 historical_price_data = historical_price_response.json()
 df = pd.DataFrame(historical_price_data)
 
