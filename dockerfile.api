@@ -5,6 +5,7 @@ WORKDIR /app
 COPY src/fetch_and_ingest.py /app/src/
 COPY src/api.py /app/src/
 COPY src/models.py /app/src/
+COPY src/__init__.py /app/src
 
 RUN pip install psycopg2-binary fastapi[standard] python-dotenv requests
 
