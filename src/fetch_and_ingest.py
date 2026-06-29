@@ -16,6 +16,7 @@ start_date = os.getenv("START_DATE")
 db_host = os.getenv("DB_HOST")
 db_name = os.getenv("DB_NAME")
 db_user = os.getenv("DB_USER")
+db_password = os.getenv("DB_PASSWORD")
 db_port = os.getenv("DB_PORT")
 
 logging.basicConfig(level=logging.INFO)
@@ -25,6 +26,7 @@ def get_connection():
         dbname=db_name,
         user=db_user,
         host=db_host,
+        password=db_password,
         port=db_port
     )
     return conn
