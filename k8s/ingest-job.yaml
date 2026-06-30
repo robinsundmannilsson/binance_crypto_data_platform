@@ -1,0 +1,39 @@
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: ingest
+spec:
+  schedule: "0 0 * * *"
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          containers:
+            - name: ingest
+              image: binance_crypto_data_platform-ingest:latest
+              env:
+                - name: BASE_URL
+                  value: "https://api.binance.com/api/v3/klines"
+                - name: SYMBOLS
+                  value: "BTCUSDT,ETHUSDT,XRPUSDT,SOLUSDT,LINKUSDT,ADAUSDT"
+                - name: INTERVAL
+                  value: "1d"
+                - name: START_DATE
+                  value: "2000-01-01"
+                - name: DB_HOST
+                  value: "postgres"
+                - name: DB_PORT
+                  value: "5432"
+                - name: DB_NAME
+                  value: binance_crypto_data
+                - name: DB_USER
+                  valueFrom:
+                    secretKeyRef:
+                      name: postgres-secret
+                      key: DB_USER
+                - name: DB_PASSWORD
+                  valueFrom:
+                    secretKeyRef:
+                      name: postgres-secret
+                      key: DB_PASSWORD
+          restartPolicy: Never
