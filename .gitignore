@@ -14,3 +14,6 @@ wheels/
 
 # claude
 .claude
+
+# kubernetes secrets
+k8s/postgres-secrets.yaml
