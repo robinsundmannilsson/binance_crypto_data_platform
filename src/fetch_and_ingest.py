@@ -9,19 +9,14 @@ import logging
 
 load_dotenv()
 
-base_url = os.getenv("BASE_URL")
-symbols = os.getenv("SYMBOLS").split(",")
-interval = os.getenv("INTERVAL")
-start_date = os.getenv("START_DATE")
-db_host = os.getenv("DB_HOST")
-db_name = os.getenv("DB_NAME")
-db_user = os.getenv("DB_USER")
-db_password = os.getenv("DB_PASSWORD")
-db_port = os.getenv("DB_PORT")
-
 logging.basicConfig(level=logging.INFO)
 
 def get_connection():
+    db_host = os.getenv("DB_HOST")
+    db_name = os.getenv("DB_NAME")
+    db_user = os.getenv("DB_USER")
+    db_password = os.getenv("DB_PASSWORD")
+    db_port = os.getenv("DB_PORT")
     conn = psycopg2.connect(
         dbname=db_name,
         user=db_user,
@@ -97,6 +92,11 @@ if __name__ == "__main__":
 
             logging.info("Creating table if it does not exist...")
             create_table_if_not_exists(cur)
+
+            base_url = os.getenv("BASE_URL")
+            symbols = os.getenv("SYMBOLS").split(",")
+            interval = os.getenv("INTERVAL")
+            start_date = os.getenv("START_DATE")
 
             for symbol in symbols:
                 params["symbol"] = symbol

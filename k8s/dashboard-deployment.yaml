@@ -15,6 +15,7 @@ spec:
       containers:
         - name: dashboard
           image: binance_crypto_data_platform-dashboard:latest
+          imagePullPolicy: Never
           ports:
             - containerPort: 8501
           env:

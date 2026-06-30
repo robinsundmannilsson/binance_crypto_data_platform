@@ -15,6 +15,7 @@ spec:
       containers:
         - name: api
           image: binance_crypto_data_platform-api:latest
+          imagePullPolicy: Never
           ports:
             - containerPort: 8000
           env:

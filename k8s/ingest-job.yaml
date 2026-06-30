@@ -11,6 +11,7 @@ spec:
           containers:
             - name: ingest
               image: binance_crypto_data_platform-ingest:latest
+              imagePullPolicy: Never
               env:
                 - name: BASE_URL
                   value: "https://api.binance.com/api/v3/klines"
