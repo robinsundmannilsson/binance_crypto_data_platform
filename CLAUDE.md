@@ -46,6 +46,16 @@ src/
   api.py                # FastAPI app
   models.py             # Pydantic response models
   dashboard.py          # Streamlit dashboard
+k8s/
+  postgres-secrets.yaml     # Kubernetes Secret (gitignored)
+  postgres-pvc.yaml         # PersistentVolumeClaim för Postgres
+  postgres-deployment.yaml  # Postgres Deployment
+  postgres-service.yaml     # Postgres Service
+  api-deployment.yaml       # API Deployment
+  api-service.yaml          # API Service
+  dashboard-deployment.yaml # Dashboard Deployment
+  dashboard-service.yaml    # Dashboard Service
+  ingest-job.yaml           # CronJob för daglig ingest
 dockerfile.ingest       # Docker image for ingest
 dockerfile.api          # Docker image for API
 dockerfile.dashboard    # Docker image for dashboard
@@ -68,6 +78,8 @@ docker-compose.yml      # Orchestrerar alla services
 - [x] Streamlit dashboard med valutakonvertering och Plotly candlestick-chart
 - [x] Dockerfiles för alla tre services (ingest, api, dashboard)
 - [x] docker-compose.yml med healthcheck, volumes och service dependencies
+- [x] Kubernetes manifests för alla services (Deployment, Service, PVC, Secret, CronJob)
+- [x] Lokalt kind-kluster (`binance-crypto-cluster`) med alla pods körandes
 
 ## FastAPI
 - **File**: `src/api.py`
@@ -96,8 +108,17 @@ docker-compose.yml      # Orchestrerar alla services
 - `API_BASE=http://api:8000` sätts i dockerfile.dashboard via ENV
 - Healthcheck på postgres + `condition: service_healthy` säkerställer rätt startordning
 
+## Kubernetes (kind)
+- **Kluster**: `binance-crypto-cluster` — skapat med `kind create cluster --name binance-crypto-cluster`
+- **Images** laddas in med: `kind load docker-image <image> --name binance-crypto-cluster`
+- **imagePullPolicy: Never** krävs i deployments för att använda lokala images
+- **Secrets** för känsliga variabler (`DB_USER`, `DB_PASSWORD`, `DB_PORT`) — gitignorerad
+- **CronJob** för ingest kör dagligen midnatt — triggas manuellt med: `kubectl create job ingest-manual --from=cronjob/ingest`
+- **Port-forward** för att nå dashboard lokalt: `kubectl port-forward service/dashboard 8501:8501`
+- Applicera alla manifests: `kubectl apply -f k8s/`
+
 ## What's Next
-1. Kubernetes (kind) — kind och kubectl installerade
+- Assignment är komplett!
 
 ## Environment
 Copy `.env.example` and fill in your values:
