@@ -1,0 +1,22 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: dashboard
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: dashboard
+  template:
+    metadata:
+      labels:
+        app: dashboard
+    spec:
+      containers:
+        - name: dashboard
+          image: binance_crypto_data_platform-dashboard:latest
+          ports:
+            - containerPort: 8501
+          env:
+            - name: API_BASE
+              value: "http://api:8000"
