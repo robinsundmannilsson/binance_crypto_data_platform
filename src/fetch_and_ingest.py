@@ -78,6 +78,12 @@ def insert_candle(cur, candle):
     """, candle_data)
 
 if __name__ == "__main__":
+
+    base_url = os.getenv("BASE_URL")
+    symbols = os.getenv("SYMBOLS").split(",")
+    interval = os.getenv("INTERVAL")
+    start_date = os.getenv("START_DATE")
+
     start = datetime.strptime(start_date, "%Y-%m-%d").replace(tzinfo=timezone.utc)
     start_ms = int(start.timestamp() * 1000)
 
@@ -92,11 +98,6 @@ if __name__ == "__main__":
 
             logging.info("Creating table if it does not exist...")
             create_table_if_not_exists(cur)
-
-            base_url = os.getenv("BASE_URL")
-            symbols = os.getenv("SYMBOLS").split(",")
-            interval = os.getenv("INTERVAL")
-            start_date = os.getenv("START_DATE")
 
             for symbol in symbols:
                 params["symbol"] = symbol
