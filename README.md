@@ -222,8 +222,29 @@ docker compose down -v
 docker compose logs api
 docker compose logs ingest
 
+# Follow logs in real time
+docker compose logs -f api
+
 # List running containers
 docker ps
+
+# List all containers (including stopped)
+docker ps -a
+
+# List all local images
+docker images
+
+# Remove a specific image
+docker rmi <image-name>
+
+# Remove all unused images (frees up disk space)
+docker image prune
+
+# Open a shell inside a running container (useful for debugging)
+docker exec -it <container-name> bash
+
+# View resource usage for running containers (CPU, memory, network)
+docker stats
 ```
 
 ### Kubernetes (kind)
@@ -267,6 +288,10 @@ kubectl port-forward service/dashboard 8501:8501
 
 # Port-forward API
 kubectl port-forward service/api 8000:8000
+
+# Resume after restarting Docker Desktop (cluster already exists)
+kubectl config use-context kind-binance-crypto-cluster
+kubectl get pods
 ```
 
 ### PostgreSQL
