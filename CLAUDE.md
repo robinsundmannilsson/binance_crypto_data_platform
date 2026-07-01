@@ -117,8 +117,20 @@ docker-compose.yml      # Orchestrerar alla services
 - **Port-forward** för att nå dashboard lokalt: `kubectl port-forward service/dashboard 8501:8501`
 - Applicera alla manifests: `kubectl apply -f k8s/`
 
+## AWS Deployment (Serverless + Pulumi)
+- **Mål**: deploya hela stacken till AWS med serverless-arkitektur via Pulumi (Infrastructure as Code)
+- **Verktyg**: `awscli` + `pulumi` — installerade globalt via Homebrew
+- **Arkitektur**:
+  - **Ingest** → AWS Lambda + EventBridge (dagligt cron-schema)
+  - **API** → AWS Lambda + API Gateway (FastAPI via Mangum-adapter)
+  - **Databas** → AWS RDS Postgres
+  - **Dashboard** → AWS ECS Fargate (Streamlit passar inte serverless)
+- **Pulumi-språk**: Python
+- **AWS-miljö**: sandbox-konto tilldelat av chefen
+
 ## What's Next
-- Assignment är komplett!
+- Sätta upp Pulumi-projekt och konfigurera AWS credentials
+- Deploya infrastruktur till AWS
 
 ## Environment
 Copy `.env.example` and fill in your values:
