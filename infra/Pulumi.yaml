@@ -1,0 +1,11 @@
+name: binance-crypto-platform
+description: AWS Infrastructure for the Binance Crypto Data Platform
+runtime:
+  name: python
+  options:
+    toolchain: pip
+    virtualenv: venv
+config:
+  pulumi:tags:
+    value:
+      pulumi:template: python
