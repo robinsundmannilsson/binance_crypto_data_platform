@@ -182,6 +182,96 @@ Open http://localhost:8501 in your browser.
 
 ---
 
+## Useful Commands
+
+### Docker
+
+```bash
+# Build all images
+docker build -f dockerfile.api -t binance_crypto_data_platform-api:latest .
+docker build -f dockerfile.ingest -t binance_crypto_data_platform-ingest:latest .
+docker build -f dockerfile.dashboard -t binance_crypto_data_platform-dashboard:latest .
+
+# Start the full stack
+docker compose up --build
+
+# Start in the background
+docker compose up --build -d
+
+# Stop all services
+docker compose down
+
+# Stop and remove volumes (deletes all data)
+docker compose down -v
+
+# View logs for a specific service
+docker compose logs api
+docker compose logs ingest
+
+# List running containers
+docker ps
+```
+
+### Kubernetes (kind)
+
+```bash
+# Create the cluster
+kind create cluster --name binance-crypto-cluster
+
+# Delete the cluster
+kind delete cluster --name binance-crypto-cluster
+
+# Load images into the cluster
+kind load docker-image binance_crypto_data_platform-api:latest --name binance-crypto-cluster
+kind load docker-image binance_crypto_data_platform-ingest:latest --name binance-crypto-cluster
+kind load docker-image binance_crypto_data_platform-dashboard:latest --name binance-crypto-cluster
+
+# Apply all manifests
+kubectl apply -f k8s/
+
+# Delete all resources
+kubectl delete -f k8s/
+
+# Check pod status
+kubectl get pods
+
+# View logs for a deployment
+kubectl logs deployment/api
+kubectl logs deployment/dashboard
+
+# Restart a deployment
+kubectl rollout restart deployment/api
+
+# Trigger ingest manually
+kubectl create job ingest-manual --from=cronjob/ingest
+
+# Delete a manual job
+kubectl delete job ingest-manual
+
+# Port-forward dashboard
+kubectl port-forward service/dashboard 8501:8501
+
+# Port-forward API
+kubectl port-forward service/api 8000:8000
+```
+
+### PostgreSQL
+
+```bash
+# Connect to local Postgres
+psql -U <your_postgres_user> -d binance_crypto_data
+
+# Connect to Postgres inside Kubernetes
+kubectl exec -it deployment/postgres -- psql -U <your_postgres_user> -d binance_crypto_data
+
+# Useful queries
+SELECT COUNT(*) FROM crypto_daily_candles;
+SELECT DISTINCT symbol FROM crypto_daily_candles;
+SELECT * FROM crypto_daily_candles WHERE symbol = 'BTCUSDT' ORDER BY open_time DESC LIMIT 5;
+```
+
+---
+
 ## Screenshots
 
 *Coming soon*
