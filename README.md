@@ -13,12 +13,26 @@ A full data service lifecycle pipeline that ingests historical cryptocurrency da
 
 ## Features
 
-- Ingests historical daily OHLCV candle data for 6 cryptocurrencies from the Binance public API
+- Ingests historical daily OHLCV (Open, High, Low, Close, Volume) candle data for 6 cryptocurrencies from the Binance public API
 - Stores data in PostgreSQL using `NUMERIC(20,8)` precision (no floats for financial data)
 - Upsert logic — safe to re-run without duplicates
 - FastAPI with Pydantic response models and optional date filtering
-- Streamlit dashboard with live currency conversion (USD/EUR/SEK/NOK/DKK) and Plotly candlestick charts
+- Streamlit dashboard with live currency conversion and Plotly candlestick charts
 - Deployable locally with Docker Compose or on a Kubernetes cluster with kind
+
+---
+
+## Dashboard
+
+The Streamlit dashboard connects to the FastAPI and provides:
+
+- **Latest trading data** — open, high, low and close price for the most recent candle, with percentage change between open and close
+- **Historical statistics** — all-time high and all-time low across the full price history
+- **Candlestick chart** — interactive Plotly chart showing the full OHLC history for the selected cryptocurrency
+
+**Currency conversion** is handled at display time via the [Frankfurter API](https://www.frankfurter.app/). Prices are stored in USD and converted live to the selected currency — no historical exchange rates are stored.
+
+Supported currencies: USD, EUR, SEK, NOK, DKK
 
 ---
 
@@ -77,6 +91,7 @@ cp .env.example .env
 ```
 
 ```
+BASE_URL=https://api.binance.com/api/v3/klines
 SYMBOLS=BTCUSDT,ETHUSDT,XRPUSDT,SOLUSDT,LINKUSDT,ADAUSDT
 INTERVAL=1d
 START_DATE=2000-01-01
@@ -85,7 +100,6 @@ DB_NAME=binance_crypto_data
 DB_USER=<your_postgres_user>
 DB_PASSWORD=<your_postgres_password>
 DB_PORT=5432
-BASE_URL=https://api.binance.com/api/v3/klines
 ```
 
 ---
@@ -274,4 +288,5 @@ SELECT * FROM crypto_daily_candles WHERE symbol = 'BTCUSDT' ORDER BY open_time D
 
 ## Screenshots
 
-*Coming soon*
+![Dashboard](assets/screenshot_dashboard_1.png)
+![Dashboard](assets/screenshot_dashboard_2.png)
