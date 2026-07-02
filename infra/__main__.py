@@ -162,3 +162,22 @@ aws.lambda_.Permission(
     principal="apigateway.amazonaws.com",
     source_arn=api_gateway.execution_arn.apply(lambda arn: f"{arn}/*/*"),
 )
+
+event_rule = aws.cloudwatch.EventRule(
+    "ingest-schedule",
+    schedule_expression="cron(0 0 * * ? *)",
+)
+
+aws.cloudwatch.EventTarget(
+    "ingest-target",
+    rule=event_rule.name,
+    arn=ingest_lambda.arn,
+)
+
+aws.lambda_.Permission(
+    "eventbridge-permission",
+    action="lambda:InvokeFunction",
+    function=ingest_lambda.name,
+    principal="events.amazonaws.com",
+    source_arn=event_rule.arn,
+)
