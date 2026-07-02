@@ -70,6 +70,7 @@ name = "binance-crypto-data-platform"
 version = "0.1.0"
 source = { virtual = "." }
 dependencies = [
+    { name = "claude" },
     { name = "fastapi", extra = ["standard"] },
     { name = "mangum" },
     { name = "plotly" },
@@ -84,6 +85,7 @@ dependencies = [
 
 [package.metadata]
 requires-dist = [
+    { name = "claude", specifier = ">=0.4.11" },
     { name = "fastapi", extras = ["standard"], specifier = ">=0.138.0" },
     { name = "mangum", specifier = ">=0.21.0" },
     { name = "plotly", specifier = ">=6.8.0" },
@@ -178,6 +180,15 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/7a/1d/29d32e0fb40864b1f878c7f5a0b343ae676c6e2b271a2d55cc3a152391da/charset_normalizer-3.4.7-cp314-cp314t-win_amd64.whl", hash = "sha256:03853ed82eeebbce3c2abfdbc98c96dc205f32a79627688ac9a27370ea61a49c", size = 174168, upload-time = "2026-04-02T09:27:49.795Z" },
     { url = "https://files.pythonhosted.org/packages/de/32/d92444ad05c7a6e41fb2036749777c163baf7a0301a040cb672d6b2b1ae9/charset_normalizer-3.4.7-cp314-cp314t-win_arm64.whl", hash = "sha256:c35abb8bfff0185efac5878da64c45dafd2b37fb0383add1be155a763c1f083d", size = 153018, upload-time = "2026-04-02T09:27:51.116Z" },
     { url = "https://files.pythonhosted.org/packages/db/8f/61959034484a4a7c527811f4721e75d02d653a35afb0b6054474d8185d4c/charset_normalizer-3.4.7-py3-none-any.whl", hash = "sha256:3dce51d0f5e7951f8bb4900c257dad282f49190fdbebecd4ba99bcc41fef404d", size = 61958, upload-time = "2026-04-02T09:28:37.794Z" },
+]
+
+[[package]]
+name = "claude"
+version = "0.4.11"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/fa/0d/40d26e7074d10f946ae06f6125de511ef0318598d7c3cc27c4ce9c9eb0a8/claude-0.4.11.tar.gz", hash = "sha256:a76ecc7e28869866c4353a39d176397a3b6964b543ef176363db5ea32726868d", size = 820, upload-time = "2025-06-10T18:49:08.992Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/63/2b/aa9b6b6fbf63e094c3dfe2ec0010ddd952934647ee51e13a97186b91a44d/claude-0.4.11-py3-none-any.whl", hash = "sha256:369b5945461154bdcb9957f375944e9268ad343e15a924af2476a05b1c167478", size = 1167, upload-time = "2025-06-10T18:49:08.17Z" },
 ]
 
 [[package]]

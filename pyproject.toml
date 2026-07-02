@@ -5,6 +5,7 @@ description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.13"
 dependencies = [
+    "claude>=0.4.11",
     "fastapi[standard]>=0.138.0",
     "mangum>=0.21.0",
     "plotly>=6.8.0",
