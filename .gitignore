@@ -19,4 +19,4 @@ wheels/
 k8s/postgres-secrets.yaml
 
 # notes
-notes.txt
+notes.md
