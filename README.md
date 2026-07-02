@@ -214,6 +214,8 @@ AWS_PROFILE=<your_aws_profile>
 
 This provisions the infrastructure, builds and pushes the Docker images to ECR, then rolls out the Lambda functions and API Gateway in the correct order. On completion it prints the API Gateway URL.
 
+`deploy.sh` is self-contained — it sources `.env` and points Pulumi at `infra/.pulumi-passphrase` itself, so it works in a brand new terminal with no manual exports. Just make sure `.env` and `infra/.pulumi-passphrase` exist, and run it from the project root.
+
 ### Tear down
 
 ```bash
