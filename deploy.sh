@@ -14,11 +14,19 @@ if [ -z "$PULUMI_CONFIG_PASSPHRASE" ]; then
     export PULUMI_CONFIG_PASSPHRASE_FILE="$(pwd)/infra/.pulumi-passphrase"
 fi
 
-echo "=== [1/5] Pulumi up (infrastructure) ==="
 cd infra
-pulumi config set deploy_lambda false
-pulumi up --yes --non-interactive
+DEPLOY_LAMBDA_CURRENT=$(pulumi config get deploy_lambda 2>/dev/null || echo "false")
 cd ..
+
+if [ "$DEPLOY_LAMBDA_CURRENT" != "true" ]; then
+    echo "=== [1/5] Pulumi up (infrastructure, first deploy) ==="
+    cd infra
+    pulumi config set deploy_lambda false
+    pulumi up --yes --non-interactive
+    cd ..
+else
+    echo "=== [1/5] Lambdas already deployed — skipping base-infra toggle ==="
+fi
 
 echo "=== [2/5] ECR login ==="
 aws ecr get-login-password --region $REGION --profile $PROFILE | \

@@ -74,10 +74,21 @@ event_rule = aws.cloudwatch.EventRule(
 )
 
 if deploy_lambda:
+    ingest_image = aws.ecr.get_image_output(
+        repository_name=ingest_repo.name,
+        image_tag="latest",
+    )
+    api_image = aws.ecr.get_image_output(
+        repository_name=api_repo.name,
+        image_tag="latest",
+    )
+
     ingest_lambda = aws.lambda_.Function(
         "ingest-lambda",
         package_type="Image",
-        image_uri=ingest_repo.repository_url.apply(lambda url: f"{url}:latest"),
+        image_uri=pulumi.Output.all(ingest_repo.repository_url, ingest_image.image_digest).apply(
+            lambda args: f"{args[0]}@{args[1]}"
+        ),
         role=lambda_role.arn,
         timeout=300,
         memory_size=512,
@@ -99,7 +110,9 @@ if deploy_lambda:
     api_lambda = aws.lambda_.Function(
         "api-lambda",
         package_type="Image",
-        image_uri=api_repo.repository_url.apply(lambda url: f"{url}:latest"),
+        image_uri=pulumi.Output.all(api_repo.repository_url, api_image.image_digest).apply(
+            lambda args: f"{args[0]}@{args[1]}"
+        ),
         role=lambda_role.arn,
         timeout=30,
         memory_size=512,
