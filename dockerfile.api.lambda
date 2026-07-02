@@ -1,0 +1,10 @@
+FROM public.ecr.aws/lambda/python:3.13
+
+COPY src/fetch_and_ingest.py ${LAMBDA_TASK_ROOT}/src/
+COPY src/api.py ${LAMBDA_TASK_ROOT}/src/
+COPY src/models.py ${LAMBDA_TASK_ROOT}/src/
+COPY src/__init__.py ${LAMBDA_TASK_ROOT}/src/
+
+RUN pip install psycopg2-binary fastapi[standard] python-dotenv requests mangum
+
+CMD ["src.api.handler"]
