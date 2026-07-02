@@ -1,6 +1,6 @@
-# Notes & Useful Commands
+# Runbooks
 
-Commands organized by how/where you run the project:
+Step-by-step commands for running and operating the project, organized by run target:
 
 | File | When to use |
 |------|-------------|

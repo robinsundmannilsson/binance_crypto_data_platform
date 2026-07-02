@@ -19,8 +19,5 @@ infra/.pulumi-passphrase
 # kubernetes secrets
 k8s/postgres-secrets.yaml
 
-# notes
-notes.md
-
 # pulumi passphrase file
 .pulumi-passphrase

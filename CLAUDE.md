@@ -66,8 +66,8 @@ dockerfile.ingest.lambda # Docker image for ingest Lambda (Lambda base image + h
 dockerfile.api           # Docker image for API (local/Docker Compose only)
 dockerfile.api.lambda    # Docker image for API Lambda (Lambda base image + Mangum handler)
 dockerfile.dashboard     # Docker image for dashboard (local/Docker Compose/kind + ECS Fargate)
-notes/
-  README.md             # Index: which notes file for which run target
+runbooks/
+  README.md             # Index: which runbook for which run target
   local.md              # Commands: run directly (uv + local Postgres)
   docker.md             # Commands: Docker Compose
   kubernetes.md         # Commands: kind cluster
