@@ -148,3 +148,17 @@ api_lambda = aws.lambda_.Function(
         }
     },
 )
+
+api_gateway = aws.apigatewayv2.Api(
+    "crypto-data-platform-api-gateway",
+    protocol_type="HTTP",
+    target=api_lambda.arn,
+)
+
+aws.lambda_.Permission(
+    "api-gateway-permission",
+    action="lambda:InvokeFunction",
+    function=api_lambda.name,
+    principal="apigateway.amazonaws.com",
+    source_arn=api_gateway.execution_arn.apply(lambda arn: f"{arn}/*/*"),
+)
