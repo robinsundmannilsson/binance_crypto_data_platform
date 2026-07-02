@@ -17,3 +17,6 @@ wheels/
 
 # kubernetes secrets
 k8s/postgres-secrets.yaml
+
+# notes
+notes.txt
