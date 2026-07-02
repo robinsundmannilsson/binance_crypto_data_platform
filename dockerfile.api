@@ -7,6 +7,6 @@ COPY src/api.py /app/src/
 COPY src/models.py /app/src/
 COPY src/__init__.py /app/src
 
-RUN pip install psycopg2-binary fastapi[standard] python-dotenv requests
+RUN pip install psycopg2-binary fastapi[standard] python-dotenv requests mangum
 
 CMD ["fastapi", "run", "src/api.py", "--host", "0.0.0.0", "--port", "8000"]
