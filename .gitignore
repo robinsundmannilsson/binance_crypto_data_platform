@@ -11,6 +11,7 @@ wheels/
 
 # env
 .env
+infra/.pulumi-passphrase
 
 # claude
 .claude
@@ -20,3 +21,6 @@ k8s/postgres-secrets.yaml
 
 # notes
 notes.md
+
+# pulumi passphrase file
+.pulumi-passphrase
