@@ -1,0 +1,10 @@
+.venv
+venv
+infra/venv
+__pycache__
+*.pyc
+.env
+.git
+k8s
+infra
+notes.md
