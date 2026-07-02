@@ -2,10 +2,10 @@
 
 import pulumi
 import pulumi_aws as aws
-import pulumi_docker as docker
 
 config = pulumi.Config()
 db_password = config.require_secret("db_password")
+deploy_lambda = config.get_bool("deploy_lambda") or False
 
 default_vpc = aws.ec2.get_vpc(default=True)
 default_subnets = aws.ec2.get_subnets(filters=[{"name": "vpc-id", "values": [default_vpc.id]}])
@@ -49,37 +49,6 @@ api_repo = aws.ecr.Repository(
     force_delete=True,
 )
 
-ecr_auth = aws.ecr.get_authorization_token_output()
-
-ingest_image = docker.Image(
-    "ingest-image",
-    build={
-        "context": "..",
-        "dockerfile": "../dockerfile.ingest",
-        "platform": "linux/amd64",
-    },
-    image_name=ingest_repo.repository_url.apply(lambda url: f"{url}:latest"),
-    registry={
-        "server": ingest_repo.repository_url,
-        "username": ecr_auth.user_name,
-        "password": ecr_auth.password,
-    },
-)
-
-api_image = docker.Image(
-    "api-image",
-    build={
-        "context": "..",
-        "dockerfile": "../dockerfile.api.lambda",
-        "platform": "linux/amd64",
-    },
-    image_name=api_repo.repository_url.apply(lambda url: f"{url}:latest"),
-    registry={
-        "server": api_repo.repository_url,
-        "username": ecr_auth.user_name,
-        "password": ecr_auth.password,
-    },
-)
 
 lambda_role = aws.iam.Role(
     "lambda-role",
@@ -99,77 +68,78 @@ aws.iam.RolePolicyAttachment(
     policy_arn="arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole",
 )
 
-ingest_lambda = aws.lambda_.Function(
-    "ingest-lambda",
-    package_type="Image",
-    image_uri=ingest_image.image_name,
-    role=lambda_role.arn,
-    timeout=300,
-    memory_size=512,
-    environment={
-        "variables": {
-            "DB_HOST": db.address,
-            "DB_NAME": "binance_crypto_data",
-            "DB_USER": "dbadmin",
-            "DB_PASSWORD": db_password,
-            "DB_PORT": "5432",
-            "BASE_URL": "https://api.binance.com/api/v3/klines",
-            "SYMBOLS": "BTCUSDT,ETHUSDT,XRPUSDT,SOLUSDT,LINKUSDT,ADAUSDT",
-            "INTERVAL": "1d",
-            "START_DATE": "2000-01-01",
-        }
-    },
-)
-
-api_lambda = aws.lambda_.Function(
-    "api-lambda",
-    package_type="Image",
-    image_uri=api_image.image_name,
-    role=lambda_role.arn,
-    timeout=30,
-    memory_size=512,
-    environment={
-        "variables": {
-            "DB_HOST": db.address,
-            "DB_NAME": "binance_crypto_data",
-            "DB_USER": "dbadmin",
-            "DB_PASSWORD": db_password,
-            "DB_PORT": "5432",
-        }
-    },
-)
-
-api_gateway = aws.apigatewayv2.Api(
-    "crypto-data-platform-api-gateway",
-    protocol_type="HTTP",
-    target=api_lambda.arn,
-)
-
-aws.lambda_.Permission(
-    "api-gateway-permission",
-    action="lambda:InvokeFunction",
-    function=api_lambda.name,
-    principal="apigateway.amazonaws.com",
-    source_arn=api_gateway.execution_arn.apply(lambda arn: f"{arn}/*/*"),
-)
-
 event_rule = aws.cloudwatch.EventRule(
     "ingest-schedule",
     schedule_expression="cron(0 0 * * ? *)",
 )
 
-aws.cloudwatch.EventTarget(
-    "ingest-target",
-    rule=event_rule.name,
-    arn=ingest_lambda.arn,
-)
+if deploy_lambda:
+    ingest_lambda = aws.lambda_.Function(
+        "ingest-lambda",
+        package_type="Image",
+        image_uri=ingest_repo.repository_url.apply(lambda url: f"{url}:latest"),
+        role=lambda_role.arn,
+        timeout=300,
+        memory_size=512,
+        environment={
+            "variables": {
+                "DB_HOST": db.address,
+                "DB_NAME": "binance_crypto_data",
+                "DB_USER": "dbadmin",
+                "DB_PASSWORD": db_password,
+                "DB_PORT": "5432",
+                "BASE_URL": "https://api.binance.com/api/v3/klines",
+                "SYMBOLS": "BTCUSDT,ETHUSDT,XRPUSDT,SOLUSDT,LINKUSDT,ADAUSDT",
+                "INTERVAL": "1d",
+                "START_DATE": "2000-01-01",
+            }
+        },
+    )
 
-aws.lambda_.Permission(
-    "eventbridge-permission",
-    action="lambda:InvokeFunction",
-    function=ingest_lambda.name,
-    principal="events.amazonaws.com",
-    source_arn=event_rule.arn,
-)
+    api_lambda = aws.lambda_.Function(
+        "api-lambda",
+        package_type="Image",
+        image_uri=api_repo.repository_url.apply(lambda url: f"{url}:latest"),
+        role=lambda_role.arn,
+        timeout=30,
+        memory_size=512,
+        environment={
+            "variables": {
+                "DB_HOST": db.address,
+                "DB_NAME": "binance_crypto_data",
+                "DB_USER": "dbadmin",
+                "DB_PASSWORD": db_password,
+                "DB_PORT": "5432",
+            }
+        },
+    )
 
-pulumi.export("api_url", api_gateway.api_endpoint)
+    api_gateway = aws.apigatewayv2.Api(
+        "crypto-data-platform-api-gateway",
+        protocol_type="HTTP",
+        target=api_lambda.arn,
+    )
+
+    aws.lambda_.Permission(
+        "api-gateway-permission",
+        action="lambda:InvokeFunction",
+        function=api_lambda.name,
+        principal="apigateway.amazonaws.com",
+        source_arn=api_gateway.execution_arn.apply(lambda arn: f"{arn}/*/*"),
+    )
+
+    aws.cloudwatch.EventTarget(
+        "ingest-target",
+        rule=event_rule.name,
+        arn=ingest_lambda.arn,
+    )
+
+    aws.lambda_.Permission(
+        "eventbridge-permission",
+        action="lambda:InvokeFunction",
+        function=ingest_lambda.name,
+        principal="events.amazonaws.com",
+        source_arn=event_rule.arn,
+    )
+
+    pulumi.export("api_url", api_gateway.api_endpoint)

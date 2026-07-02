@@ -2,5 +2,3 @@ encryptionsalt: v1:E7xkbtYsHAg=:v1:/WZYa0xpBo7j/sWx:SWP1HNbyz9SNsckaqGbQIAIo1zgQ
 config:
   binance-crypto-platform:db_password:
     secure: v1:yyae3VANNng3f9GM:IoajiOXGZvxjJQovpCp/oQHRI8dYgbbN
-  aws:profile: <AWS_PROFILE>
-  aws:region: <AWS_REGION>
