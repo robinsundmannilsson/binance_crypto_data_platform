@@ -55,7 +55,7 @@ ingest_image = docker.Image(
     "ingest-image",
     build={
         "context": "..",
-        "dockerfile": "dockerfile.ingest",
+        "dockerfile": "../dockerfile.ingest",
         "platform": "linux/amd64",
     },
     image_name=ingest_repo.repository_url.apply(lambda url: f"{url}:latest"),
@@ -70,7 +70,7 @@ api_image = docker.Image(
     "api-image",
     build={
         "context": "..",
-        "dockerfile": "dockerfile.api.lambda",
+        "dockerfile": "../dockerfile.api.lambda",
         "platform": "linux/amd64",
     },
     image_name=api_repo.repository_url.apply(lambda url: f"{url}:latest"),
