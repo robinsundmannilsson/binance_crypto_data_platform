@@ -57,14 +57,16 @@ k8s/
   dashboard-service.yaml    # Dashboard Service
   ingest-job.yaml           # CronJob for daily ingest
 infra/
-  __main__.py           # Pulumi IaC (VPC, RDS, ECR, Lambda, API Gateway, EventBridge)
+  __main__.py           # Pulumi IaC (RDS, ECR, Lambda, API Gateway, EventBridge)
   Pulumi.yaml           # Pulumi project config
   Pulumi.dev.yaml       # Stack config for dev (encrypted secrets)
   requirements.txt      # Pulumi Python dependencies
-dockerfile.ingest       # Docker image for ingest
-dockerfile.api          # Docker image for API
+dockerfile.ingest       # Docker image for ingest (local + Lambda)
+dockerfile.api          # Docker image for API (local/Docker Compose only)
+dockerfile.api.lambda   # Docker image for API Lambda (uses Lambda base image + Mangum handler)
 dockerfile.dashboard    # Docker image for dashboard
 docker-compose.yml      # Local orchestration
+deploy.sh               # Full AWS deploy script (infra → images → Lambda)
 .env                    # Config (never commit this)
 ```
 
@@ -85,15 +87,18 @@ docker-compose.yml      # Local orchestration
 - [x] docker-compose.yml with healthcheck, volumes and service dependencies
 - [x] Kubernetes manifests for all services (Deployment, Service, PVC, Secret, CronJob)
 - [x] Local kind cluster (`binance-crypto-cluster`) with all pods running
-- [x] AWS SSO configured (`<AWS_PROFILE>` profile, `<AWS_REGION>`)
+- [x] AWS SSO configured (profile/region set via `AWS_PROFILE`/`AWS_REGION` in `.env`)
 - [x] Pulumi local mode (`pulumi login --local`), stack `dev`
-- [x] VPC, subnets, security group, RDS subnet group deployed via Pulumi
-- [x] RDS Postgres 18.4 (`db.t4g.micro`) deployed in private subnet
+- [x] RDS Postgres 18.4 (`db.t4g.micro`) in default VPC (publicly accessible)
 - [x] ECR repos created for ingest and api images
-- [x] Docker images built and pushed to ECR
+- [x] Docker images built and pushed to ECR (manually via deploy.sh)
 - [x] IAM Role + policy attachments for Lambda
 - [x] ingest Lambda + api Lambda created (container image from ECR)
 - [x] `mangum` added as dependency for FastAPI Lambda adapter
+- [x] API Gateway (HTTP API) connected to api Lambda
+- [x] EventBridge daily cron schedule connected to ingest Lambda
+- [x] `deploy_lambda` Pulumi config flag splits infra deploy from Lambda deploy
+- [x] `deploy.sh` script automates full deployment in correct order
 
 ## FastAPI
 - **File**: `src/api.py`
@@ -137,18 +142,21 @@ docker-compose.yml      # Local orchestration
 - **Architecture**:
   - **Ingest** → AWS Lambda + EventBridge (daily cron schedule)
   - **API** → AWS Lambda + API Gateway (FastAPI via Mangum adapter)
-  - **Database** → AWS RDS Postgres
-  - **Dashboard** → AWS ECS Fargate (Streamlit does not fit serverless)
+  - **Database** → AWS RDS Postgres (publicly accessible, in default VPC)
+  - **Dashboard** → AWS ECS Fargate (not yet done — Streamlit does not fit serverless)
 - **Pulumi language**: Python, local state mode (`pulumi login --local`)
-- **AWS environment**: sandbox account (`<AWS_PROFILE>` profile, `<AWS_REGION>`)
+- **AWS environment**: sandbox account (profile/region configured via `AWS_PROFILE`/`AWS_REGION` in `.env`, never hardcoded in tracked files)
 - **Docker builds for Lambda**: must use `--platform linux/amd64 --provenance=false` on Apple Silicon — Lambda only supports the classic Docker manifest format, not OCI format which Docker Desktop on Mac produces by default
+- **Two Dockerfiles for API**: `dockerfile.api` for local/Docker Compose, `dockerfile.api.lambda` for AWS Lambda (uses `public.ecr.aws/lambda/python:3.13` base image and `CMD ["src.api.handler"]`)
+- **deploy_lambda flag**: Pulumi config flag `deploy_lambda` (true/false) controls whether Lambda resources are created — set to false first, push images, then set to true
+- **Full deploy**: run `./deploy.sh` from project root — handles everything in correct order
+- **API Gateway URL**: run `pulumi stack output api_url` in `infra/` after deploy
+- **Teardown**: `cd infra && pulumi destroy` removes all AWS resources (RDS, Lambdas, ECR repos, API Gateway, EventBridge, IAM role) — requires `AWS_PROFILE`/`AWS_REGION` env vars set (e.g. `set -a && source ../.env && set +a`) and `PULUMI_CONFIG_PASSPHRASE_FILE` pointing at `infra/.pulumi-passphrase`
 
 ## What's Next
-- Add `handler = Mangum(app)` to `src/api.py`
-- API Gateway for api-Lambda (HTTP API)
-- EventBridge schedule for ingest-Lambda (daily cron)
+- Run ingest Lambda to populate RDS with historical data
+- Test all API endpoints
 - ECS Fargate for the Streamlit dashboard
-- Rebuild and push new Docker images after code changes
 
 ## Environment
 Copy `.env.example` and fill in your values:
@@ -162,4 +170,7 @@ DB_USER=<your_postgres_user>
 DB_PASSWORD=<your_postgres_password>
 DB_PORT=5432
 BASE_URL=https://api.binance.com/api/v3/klines
+AWS_ACCOUNT_ID=<your_aws_account_id>
+AWS_REGION=<your_aws_region>
+AWS_PROFILE=<your_aws_profile>
 ```

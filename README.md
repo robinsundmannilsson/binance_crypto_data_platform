@@ -186,6 +186,45 @@ Open http://localhost:8501 in your browser.
 
 ---
 
+## Deployment (AWS)
+
+The ingest and API services can also be deployed as a serverless stack on AWS using [Pulumi](https://www.pulumi.com/) (Infrastructure as Code, Python):
+
+- **Ingest** → AWS Lambda, triggered daily by an EventBridge cron schedule
+- **API** → AWS Lambda + API Gateway (FastAPI via the [Mangum](https://mangum.io/) adapter)
+- **Database** → AWS RDS for PostgreSQL
+
+### Prerequisites
+
+- [AWS CLI](https://aws.amazon.com/cli/) configured with a profile that has permissions for RDS, Lambda, ECR, API Gateway, EventBridge and IAM
+- [Pulumi CLI](https://www.pulumi.com/docs/install/), local state mode (`pulumi login --local`)
+- Add these to your `.env` (see `.env.example`):
+
+```
+AWS_ACCOUNT_ID=<your_aws_account_id>
+AWS_REGION=<your_aws_region>
+AWS_PROFILE=<your_aws_profile>
+```
+
+### Deploy
+
+```bash
+./deploy.sh
+```
+
+This provisions the infrastructure, builds and pushes the Docker images to ECR, then rolls out the Lambda functions and API Gateway in the correct order. On completion it prints the API Gateway URL.
+
+### Tear down
+
+```bash
+cd infra
+pulumi destroy
+```
+
+Removes all AWS resources created by the stack (RDS, Lambdas, ECR repos, API Gateway, EventBridge rule, IAM role).
+
+---
+
 ## API Endpoints
 
 | Method | Endpoint | Description |
