@@ -77,7 +77,7 @@ def insert_candle(cur, candle):
         number_of_trades = EXCLUDED.number_of_trades
     """, candle_data)
 
-if __name__ == "__main__":
+def run_ingest():
 
     base_url = os.getenv("BASE_URL")
     symbols = os.getenv("SYMBOLS").split(",")
@@ -126,3 +126,10 @@ if __name__ == "__main__":
                 except requests.RequestException as e:
                     logging.error(f"Error fetching data for {symbol}: {e}")
                     continue
+
+def handler(event, context):
+    run_ingest()
+    return {"status": "ok"}
+
+if __name__ == "__main__":
+    run_ingest()

@@ -33,7 +33,7 @@ aws ecr get-login-password --region $REGION --profile $PROFILE | \
     docker login --username AWS --password-stdin $ECR_REGISTRY
 
 echo "=== [3/5] Build & push ingest image ==="
-docker build --platform linux/amd64 --provenance=false -f dockerfile.ingest -t crypto-ingest .
+docker build --platform linux/amd64 --provenance=false -f dockerfile.ingest.lambda -t crypto-ingest .
 docker tag crypto-ingest $ECR_REGISTRY/crypto-data-platform-ingest-repo:latest
 docker push $ECR_REGISTRY/crypto-data-platform-ingest-repo:latest
 
