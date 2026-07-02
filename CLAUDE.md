@@ -141,6 +141,7 @@ docker-compose.yml      # Local orchestration
   - **Dashboard** → AWS ECS Fargate (Streamlit does not fit serverless)
 - **Pulumi language**: Python, local state mode (`pulumi login --local`)
 - **AWS environment**: sandbox account (`<AWS_PROFILE>` profile, `<AWS_REGION>`)
+- **Docker builds for Lambda**: must use `--platform linux/amd64 --provenance=false` on Apple Silicon — Lambda only supports the classic Docker manifest format, not OCI format which Docker Desktop on Mac produces by default
 
 ## What's Next
 - Add `handler = Mangum(app)` to `src/api.py`
