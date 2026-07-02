@@ -1,26 +1,51 @@
 # Running Locally (uv + local Postgres)
 
-## Postgres
-# Start local Postgres 18 (Homebrew)
-brew services start postgresql@18
+Run the services directly on your machine, against a local Postgres.
 
-# Connect to local Postgres
+## Postgres
+
+Start local Postgres 18 (Homebrew):
+
+```bash
+brew services start postgresql@18
+```
+
+Connect with psql:
+
+```bash
 psql -U <your_postgres_user> -d binance_crypto_data
+```
 
 ## Services
-# Run ingest once (fetches full history, upserts — safe to re-run)
+
+**Ingest** — fetches the full history and upserts, safe to re-run:
+
+```bash
 uv run python src/fetch_and_ingest.py
+```
 
-# Run API with hot reload — http://localhost:8000 (interactive docs at /docs)
+**API** — hot reload, serves on <http://localhost:8000> (interactive docs at `/docs`):
+
+```bash
 uv run fastapi dev src/api.py
+```
 
-# Run dashboard — http://localhost:8501
+**Dashboard** — serves on <http://localhost:8501>:
+
+```bash
 uv run streamlit run src/dashboard.py
+```
 
 ## Tests
+
+```bash
 uv run pytest
+```
 
 ## Useful queries
+
+```sql
 SELECT COUNT(*) FROM crypto_daily_candles;
 SELECT DISTINCT symbol FROM crypto_daily_candles;
 SELECT * FROM crypto_daily_candles WHERE symbol = 'BTCUSDT' ORDER BY open_time DESC LIMIT 5;
+```
