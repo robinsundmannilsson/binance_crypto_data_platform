@@ -8,12 +8,12 @@ Robin is a Junior Data Engineer building this as an onboarding assignment. **AI 
 - **API**: Binance public REST API (no auth required)
 - **Endpoint**: `GET https://api.binance.com/api/v3/klines`
 - **Symbols**: BTCUSDT, ETHUSDT, XRPUSDT, SOLUSDT, LINKUSDT, ADAUSDT
-- **Interval**: `1w` (weekly candles)
-- **Start date**: 2020-01-01
+- **Interval**: `1d` (daily candles)
+- **Start date**: 2000-01-01
 - **Fields stored**: symbol, open_time, open_price, high_price, low_price, close_price, volume, number_of_trades
 
 ## Key Design Decisions
-- Weekly candles chosen for richer data than monthly but simpler than daily
+- Daily candles chosen for granular historical data back to 2000-01-01
 - Prices stored as `NUMERIC(20,8)` — never FLOAT for financial data
 - Timestamps stored as `TIMESTAMPTZ` (UTC)
 - Single table for all symbols with `(symbol, open_time)` as composite primary key
@@ -22,19 +22,19 @@ Robin is a Junior Data Engineer building this as an onboarding assignment. **AI 
 
 ## Database
 - **Postgres 18** via Homebrew, started with `brew services start postgresql@18`
-- **Database**: `onboarding_crypto_data`
-- **Table**: `crypto_weekly_candles`
+- **Database**: `binance_crypto_data`
+- **Table**: `crypto_daily_candles`
 
 ```sql
-CREATE TABLE IF NOT EXISTS crypto_weekly_candles (
-    symbol TEXT,
-    open_time TIMESTAMPTZ,
-    open_price NUMERIC(20,8),
-    high_price NUMERIC(20,8),
-    low_price NUMERIC(20,8),
-    close_price NUMERIC(20,8),
-    volume NUMERIC(20,8),
-    number_of_trades INTEGER,
+CREATE TABLE IF NOT EXISTS crypto_daily_candles (
+    symbol TEXT NOT NULL,
+    open_time TIMESTAMPTZ NOT NULL,
+    open_price NUMERIC(20,8) NOT NULL,
+    high_price NUMERIC(20,8) NOT NULL,
+    low_price NUMERIC(20,8) NOT NULL,
+    close_price NUMERIC(20,8) NOT NULL,
+    volume NUMERIC(20,8) NOT NULL,
+    number_of_trades INTEGER NOT NULL,
     PRIMARY KEY (symbol, open_time)
 );
 ```
@@ -48,18 +48,23 @@ src/
   dashboard.py          # Streamlit dashboard
 k8s/
   postgres-secrets.yaml     # Kubernetes Secret (gitignored)
-  postgres-pvc.yaml         # PersistentVolumeClaim för Postgres
+  postgres-pvc.yaml         # PersistentVolumeClaim for Postgres
   postgres-deployment.yaml  # Postgres Deployment
   postgres-service.yaml     # Postgres Service
   api-deployment.yaml       # API Deployment
   api-service.yaml          # API Service
   dashboard-deployment.yaml # Dashboard Deployment
   dashboard-service.yaml    # Dashboard Service
-  ingest-job.yaml           # CronJob för daglig ingest
+  ingest-job.yaml           # CronJob for daily ingest
+infra/
+  __main__.py           # Pulumi IaC (VPC, RDS, ECR, Lambda, API Gateway, EventBridge)
+  Pulumi.yaml           # Pulumi project config
+  Pulumi.dev.yaml       # Stack config for dev (encrypted secrets)
+  requirements.txt      # Pulumi Python dependencies
 dockerfile.ingest       # Docker image for ingest
 dockerfile.api          # Docker image for API
 dockerfile.dashboard    # Docker image for dashboard
-docker-compose.yml      # Orchestrerar alla services
+docker-compose.yml      # Local orchestration
 .env                    # Config (never commit this)
 ```
 
@@ -74,12 +79,21 @@ docker-compose.yml      # Orchestrerar alla services
 - [x] Structured logging with `logging.basicConfig(level=logging.INFO)`
 - [x] Error handling for network errors with `try/except requests.RequestException`
 - [x] pytest tests for `parse_candle` (types, UTC timezone, short raw)
-- [x] FastAPI med tre endpoints, Pydantic-modeller, RealDictCursor
-- [x] Streamlit dashboard med valutakonvertering och Plotly candlestick-chart
-- [x] Dockerfiles för alla tre services (ingest, api, dashboard)
-- [x] docker-compose.yml med healthcheck, volumes och service dependencies
-- [x] Kubernetes manifests för alla services (Deployment, Service, PVC, Secret, CronJob)
-- [x] Lokalt kind-kluster (`binance-crypto-cluster`) med alla pods körandes
+- [x] FastAPI with three endpoints, Pydantic models, RealDictCursor
+- [x] Streamlit dashboard with currency conversion and Plotly candlestick chart
+- [x] Dockerfiles for all three services (ingest, api, dashboard)
+- [x] docker-compose.yml with healthcheck, volumes and service dependencies
+- [x] Kubernetes manifests for all services (Deployment, Service, PVC, Secret, CronJob)
+- [x] Local kind cluster (`binance-crypto-cluster`) with all pods running
+- [x] AWS SSO configured (`<AWS_PROFILE>` profile, `<AWS_REGION>`)
+- [x] Pulumi local mode (`pulumi login --local`), stack `dev`
+- [x] VPC, subnets, security group, RDS subnet group deployed via Pulumi
+- [x] RDS Postgres 18.4 (`db.t4g.micro`) deployed in private subnet
+- [x] ECR repos created for ingest and api images
+- [x] Docker images built and pushed to ECR
+- [x] IAM Role + policy attachments for Lambda
+- [x] ingest Lambda + api Lambda created (container image from ECR)
+- [x] `mangum` added as dependency for FastAPI Lambda adapter
 
 ## FastAPI
 - **File**: `src/api.py`
@@ -102,35 +116,38 @@ docker-compose.yml      # Orchestrerar alla services
 - Run locally with: `uv run streamlit run src/dashboard.py`
 
 ## Docker
-- Kör hela stacken med: `docker compose up --build`
-- Postgres 18 image med named volume (`postgres_data`) för persistent data
-- `DB_HOST=postgres` sätts explicit i compose för att överskriva `.env` (localhost fungerar inte i Docker)
-- `API_BASE=http://api:8000` sätts i dockerfile.dashboard via ENV
-- Healthcheck på postgres + `condition: service_healthy` säkerställer rätt startordning
+- Run the full stack with: `docker compose up --build`
+- Postgres 18 image with named volume (`postgres_data`) for persistent data
+- `DB_HOST=postgres` set explicitly in compose to override `.env` (localhost does not work in Docker)
+- `API_BASE=http://api:8000` set in dockerfile.dashboard via ENV
+- Healthcheck on postgres + `condition: service_healthy` ensures correct startup order
 
 ## Kubernetes (kind)
-- **Kluster**: `binance-crypto-cluster` — skapat med `kind create cluster --name binance-crypto-cluster`
-- **Images** laddas in med: `kind load docker-image <image> --name binance-crypto-cluster`
-- **imagePullPolicy: Never** krävs i deployments för att använda lokala images
-- **Secrets** för känsliga variabler (`DB_USER`, `DB_PASSWORD`, `DB_PORT`) — gitignorerad
-- **CronJob** för ingest kör dagligen midnatt — triggas manuellt med: `kubectl create job ingest-manual --from=cronjob/ingest`
-- **Port-forward** för att nå dashboard lokalt: `kubectl port-forward service/dashboard 8501:8501`
-- Applicera alla manifests: `kubectl apply -f k8s/`
+- **Cluster**: `binance-crypto-cluster` — created with `kind create cluster --name binance-crypto-cluster`
+- **Images** loaded with: `kind load docker-image <image> --name binance-crypto-cluster`
+- **imagePullPolicy: Never** required in deployments to use local images
+- **Secrets** for sensitive variables (`DB_USER`, `DB_PASSWORD`, `DB_PORT`) — gitignored
+- **CronJob** for ingest runs daily at midnight — trigger manually with: `kubectl create job ingest-manual --from=cronjob/ingest`
+- **Port-forward** to reach dashboard locally: `kubectl port-forward service/dashboard 8501:8501`
+- Apply all manifests: `kubectl apply -f k8s/`
 
 ## AWS Deployment (Serverless + Pulumi)
-- **Mål**: deploya hela stacken till AWS med serverless-arkitektur via Pulumi (Infrastructure as Code)
-- **Verktyg**: `awscli` + `pulumi` — installerade globalt via Homebrew
-- **Arkitektur**:
-  - **Ingest** → AWS Lambda + EventBridge (dagligt cron-schema)
-  - **API** → AWS Lambda + API Gateway (FastAPI via Mangum-adapter)
-  - **Databas** → AWS RDS Postgres
-  - **Dashboard** → AWS ECS Fargate (Streamlit passar inte serverless)
-- **Pulumi-språk**: Python
-- **AWS-miljö**: sandbox-konto tilldelat av chefen
+- **Goal**: deploy the full stack to AWS with serverless architecture via Pulumi (Infrastructure as Code)
+- **Tools**: `awscli` + `pulumi` — installed globally via Homebrew
+- **Architecture**:
+  - **Ingest** → AWS Lambda + EventBridge (daily cron schedule)
+  - **API** → AWS Lambda + API Gateway (FastAPI via Mangum adapter)
+  - **Database** → AWS RDS Postgres
+  - **Dashboard** → AWS ECS Fargate (Streamlit does not fit serverless)
+- **Pulumi language**: Python, local state mode (`pulumi login --local`)
+- **AWS environment**: sandbox account (`<AWS_PROFILE>` profile, `<AWS_REGION>`)
 
 ## What's Next
-- Sätta upp Pulumi-projekt och konfigurera AWS credentials
-- Deploya infrastruktur till AWS
+- Add `handler = Mangum(app)` to `src/api.py`
+- API Gateway for api-Lambda (HTTP API)
+- EventBridge schedule for ingest-Lambda (daily cron)
+- ECS Fargate for the Streamlit dashboard
+- Rebuild and push new Docker images after code changes
 
 ## Environment
 Copy `.env.example` and fill in your values:
