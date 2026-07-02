@@ -181,3 +181,5 @@ aws.lambda_.Permission(
     principal="events.amazonaws.com",
     source_arn=event_rule.arn,
 )
+
+pulumi.export("api_url", api_gateway.api_endpoint)
