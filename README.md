@@ -227,7 +227,7 @@ The Pulumi program detects per ECR repo whether an image has been pushed and onl
 
 `deploy.sh` is self-contained — it sources `.env` and points Pulumi at `infra/.pulumi-passphrase` itself, so it works in a brand new terminal with no manual exports. Just make sure `.env` and `infra/.pulumi-passphrase` exist, and run it from the project root.
 
-Note: the dashboard's public IP changes when the Fargate task restarts — re-run the lookup in `deploy.sh` (or see `notes.md`) to find the current one.
+Note: the dashboard's public IP changes when the Fargate task restarts — re-run the lookup in `deploy.sh` (or see [notes/aws-operations.md](notes/aws-operations.md)) to find the current one.
 
 ### Tear down
 
