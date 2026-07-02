@@ -6,6 +6,10 @@ from datetime import date
 
 app = FastAPI()
 
+@app.get("/health")
+def health():
+    return {"status": "ok"}
+
 @app.get("/candles/{symbol}", response_model=list[CandleResponse])
 def get_candle(symbol: str, from_date: date = None, to_date: date = None):
     query = """--sql
@@ -54,3 +58,6 @@ def get_latest_candle(symbol: str):
                         LIMIT 1
                         """, (symbol,))
             return cur.fetchone()
+
+from mangum import Mangum
+handler = Mangum(app)
