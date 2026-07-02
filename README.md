@@ -7,7 +7,7 @@
 ![Docker](https://img.shields.io/badge/Docker-Compose-blue?logo=docker)
 ![Kubernetes](https://img.shields.io/badge/Kubernetes-kind-blue?logo=kubernetes)
 
-A full data service lifecycle pipeline that ingests historical cryptocurrency data from the Binance public API, stores it in PostgreSQL, serves it via FastAPI, and visualises it in a Streamlit dashboard — deployable with Docker Compose or Kubernetes.
+A full data service lifecycle pipeline that ingests historical cryptocurrency data from the Binance public API, stores it in PostgreSQL, serves it via FastAPI, and visualises it in a Streamlit dashboard — deployable with Docker Compose, Kubernetes, or serverless on AWS via Pulumi.
 
 ---
 
@@ -19,6 +19,7 @@ A full data service lifecycle pipeline that ingests historical cryptocurrency da
 - FastAPI with Pydantic response models and optional date filtering
 - Streamlit dashboard with live currency conversion and Plotly candlestick charts
 - Deployable locally with Docker Compose or on a Kubernetes cluster with kind
+- Deployable to AWS with Pulumi (IaC): Lambda + EventBridge (ingest), Lambda + API Gateway (API), RDS (database), ECS Fargate (dashboard)
 
 ---
 
@@ -66,10 +67,17 @@ k8s/
   dashboard-deployment.yaml # Dashboard Deployment
   dashboard-service.yaml    # Dashboard Service
   ingest-job.yaml           # CronJob for daily ingest
-dockerfile.ingest       # Docker image for ingest
-dockerfile.api          # Docker image for API
-dockerfile.dashboard    # Docker image for dashboard
+infra/
+  __main__.py           # Pulumi IaC (RDS, ECR, Lambda, API Gateway, EventBridge, ECS Fargate)
+  Pulumi.yaml           # Pulumi project config
+  requirements.txt      # Pulumi Python dependencies
+dockerfile.ingest        # Docker image for ingest (local)
+dockerfile.ingest.lambda # Docker image for ingest on AWS Lambda
+dockerfile.api           # Docker image for API (local)
+dockerfile.api.lambda    # Docker image for API on AWS Lambda (Mangum)
+dockerfile.dashboard     # Docker image for dashboard (local + ECS Fargate)
 docker-compose.yml      # Local orchestration
+deploy.sh               # Full AWS deploy script
 ```
 
 ---
@@ -188,11 +196,12 @@ Open http://localhost:8501 in your browser.
 
 ## Deployment (AWS)
 
-The ingest and API services can also be deployed as a serverless stack on AWS using [Pulumi](https://www.pulumi.com/) (Infrastructure as Code, Python):
+The full stack can also be deployed to AWS using [Pulumi](https://www.pulumi.com/) (Infrastructure as Code, Python):
 
 - **Ingest** → AWS Lambda, triggered daily by an EventBridge cron schedule
 - **API** → AWS Lambda + API Gateway (FastAPI via the [Mangum](https://mangum.io/) adapter)
 - **Database** → AWS RDS for PostgreSQL
+- **Dashboard** → AWS ECS Fargate (Streamlit is a long-lived server and does not fit Lambda), reachable on port 8501 via the task's public IP
 
 ### Prerequisites
 
@@ -212,9 +221,13 @@ AWS_PROFILE=<your_aws_profile>
 ./deploy.sh
 ```
 
-This provisions the infrastructure, builds and pushes the Docker images to ECR, then rolls out the Lambda functions and API Gateway in the correct order. On completion it prints the API Gateway URL.
+This provisions the infrastructure, builds and pushes the Docker images to ECR, then rolls out the Lambda functions, API Gateway and the Fargate dashboard in the correct order. On completion it prints the API Gateway URL and the dashboard URL.
+
+The Pulumi program detects per ECR repo whether an image has been pushed and only deploys the services whose images exist — so the same script works for a first deploy from scratch, day-to-day updates, and adding new services. Services reference images by digest, so image updates roll out in-place and the API URL stays stable between deploys.
 
 `deploy.sh` is self-contained — it sources `.env` and points Pulumi at `infra/.pulumi-passphrase` itself, so it works in a brand new terminal with no manual exports. Just make sure `.env` and `infra/.pulumi-passphrase` exist, and run it from the project root.
+
+Note: the dashboard's public IP changes when the Fargate task restarts — re-run the lookup in `deploy.sh` (or see `notes.md`) to find the current one.
 
 ### Tear down
 
@@ -223,7 +236,7 @@ cd infra
 pulumi destroy
 ```
 
-Removes all AWS resources created by the stack (RDS, Lambdas, ECR repos, API Gateway, EventBridge rule, IAM role).
+Removes all AWS resources created by the stack (RDS, Lambdas, ECR repos, API Gateway, EventBridge rule, IAM roles, ECS cluster/service).
 
 ---
 

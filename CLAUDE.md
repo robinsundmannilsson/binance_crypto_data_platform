@@ -57,16 +57,17 @@ k8s/
   dashboard-service.yaml    # Dashboard Service
   ingest-job.yaml           # CronJob for daily ingest
 infra/
-  __main__.py           # Pulumi IaC (RDS, ECR, Lambda, API Gateway, EventBridge)
+  __main__.py           # Pulumi IaC (RDS, ECR, Lambda, API Gateway, EventBridge, ECS Fargate)
   Pulumi.yaml           # Pulumi project config
   Pulumi.dev.yaml       # Stack config for dev (encrypted secrets)
   requirements.txt      # Pulumi Python dependencies
-dockerfile.ingest       # Docker image for ingest (local + Lambda)
-dockerfile.api          # Docker image for API (local/Docker Compose only)
-dockerfile.api.lambda   # Docker image for API Lambda (uses Lambda base image + Mangum handler)
-dockerfile.dashboard    # Docker image for dashboard
+dockerfile.ingest        # Docker image for ingest (local/Docker Compose/kind)
+dockerfile.ingest.lambda # Docker image for ingest Lambda (Lambda base image + handler entry point)
+dockerfile.api           # Docker image for API (local/Docker Compose only)
+dockerfile.api.lambda    # Docker image for API Lambda (Lambda base image + Mangum handler)
+dockerfile.dashboard     # Docker image for dashboard (local/Docker Compose/kind + ECS Fargate)
 docker-compose.yml      # Local orchestration
-deploy.sh               # Full AWS deploy script (infra → images → Lambda)
+deploy.sh               # Full AWS deploy script (infra → images → services)
 .env                    # Config (never commit this)
 ```
 
@@ -90,15 +91,20 @@ deploy.sh               # Full AWS deploy script (infra → images → Lambda)
 - [x] AWS SSO configured (profile/region set via `AWS_PROFILE`/`AWS_REGION` in `.env`)
 - [x] Pulumi local mode (`pulumi login --local`), stack `dev`
 - [x] RDS Postgres 18.4 (`db.t4g.micro`) in default VPC (publicly accessible)
-- [x] ECR repos created for ingest and api images
-- [x] Docker images built and pushed to ECR (manually via deploy.sh)
+- [x] ECR repos created for ingest, api and dashboard images
+- [x] Docker images built and pushed to ECR (via deploy.sh)
 - [x] IAM Role + policy attachments for Lambda
 - [x] ingest Lambda + api Lambda created (container image from ECR)
 - [x] `mangum` added as dependency for FastAPI Lambda adapter
+- [x] `handler(event, context)` + `run_ingest()` in fetch_and_ingest.py — dual entry points (local `__main__` + Lambda)
 - [x] API Gateway (HTTP API) connected to api Lambda
 - [x] EventBridge daily cron schedule connected to ingest Lambda
-- [x] `deploy_lambda` Pulumi config flag splits infra deploy from Lambda deploy
-- [x] `deploy.sh` script automates full deployment in correct order
+- [x] Image-digest detection in Pulumi (`get_image_digest`) — deploys only services whose images exist in ECR, replaced the old `deploy_lambda` flag
+- [x] Lambdas reference images by digest (not `:latest` tag) — in-place updates, stable api_url between deploys
+- [x] Dashboard on ECS Fargate (cluster, task definition, service, SG, execution role, CloudWatch logs) with public IP on port 8501
+- [x] `deploy.sh` script automates full deployment in correct order, prints API URL + dashboard URL
+- [x] Ingest Lambda triggered, RDS populated with full history for all 6 symbols
+- [x] All three API endpoints tested against API Gateway
 
 ## FastAPI
 - **File**: `src/api.py`
@@ -143,20 +149,19 @@ deploy.sh               # Full AWS deploy script (infra → images → Lambda)
   - **Ingest** → AWS Lambda + EventBridge (daily cron schedule)
   - **API** → AWS Lambda + API Gateway (FastAPI via Mangum adapter)
   - **Database** → AWS RDS Postgres (publicly accessible, in default VPC)
-  - **Dashboard** → AWS ECS Fargate (not yet done — Streamlit does not fit serverless)
+  - **Dashboard** → AWS ECS Fargate (Streamlit is a long-lived server — does not fit Lambda), public IP on port 8501, `API_BASE` env in the task definition overrides the dockerfile ENV and points to API Gateway
 - **Pulumi language**: Python, local state mode (`pulumi login --local`)
 - **AWS environment**: sandbox account (profile/region configured via `AWS_PROFILE`/`AWS_REGION` in `.env`, never hardcoded in tracked files)
 - **Docker builds for Lambda**: must use `--platform linux/amd64 --provenance=false` on Apple Silicon — Lambda only supports the classic Docker manifest format, not OCI format which Docker Desktop on Mac produces by default
-- **Two Dockerfiles for API**: `dockerfile.api` for local/Docker Compose, `dockerfile.api.lambda` for AWS Lambda (uses `public.ecr.aws/lambda/python:3.13` base image and `CMD ["src.api.handler"]`)
-- **deploy_lambda flag**: Pulumi config flag `deploy_lambda` (true/false) controls whether Lambda resources are created — set to false first, push images, then set to true
-- **Full deploy**: run `./deploy.sh` from project root — handles everything in correct order
+- **Separate Lambda Dockerfiles**: `dockerfile.api.lambda` and `dockerfile.ingest.lambda` use the `public.ecr.aws/lambda/python:3.13` base image and a handler CMD (`src.api.handler` / `src.fetch_and_ingest.handler`); plain `dockerfile.api`/`dockerfile.ingest` are for local use
+- **Image-digest detection** (replaced the old `deploy_lambda` flag): `get_image_digest()` in `infra/__main__.py` checks ECR for a `:latest` image per repo and only deploys services whose images exist — `pulumi up` → push images → `pulumi up` is self-healing on clean slate, steady state, and when adding a new service. Services reference images by digest, so new pushes give in-place updates and `api_url` stays stable
+- **Full deploy**: run `./deploy.sh` from project root — handles everything in correct order, prints API URL + dashboard URL at the end
 - **API Gateway URL**: run `pulumi stack output api_url` in `infra/` after deploy
-- **Teardown**: `cd infra && pulumi destroy` removes all AWS resources (RDS, Lambdas, ECR repos, API Gateway, EventBridge, IAM role) — requires `AWS_PROFILE`/`AWS_REGION` env vars set (e.g. `set -a && source ../.env && set +a`) and `PULUMI_CONFIG_PASSPHRASE_FILE` pointing at `infra/.pulumi-passphrase`
+- **Dashboard IP**: changes when the Fargate task restarts — deploy.sh looks it up via task → ENI → public IP
+- **Teardown**: `cd infra && pulumi destroy` removes all AWS resources (RDS, Lambdas, ECR repos, API Gateway, EventBridge, IAM roles, ECS cluster/service) — requires `AWS_PROFILE`/`AWS_REGION` env vars set (e.g. `set -a && source ../.env && set +a`) and `PULUMI_CONFIG_PASSPHRASE_FILE` pointing at `infra/.pulumi-passphrase`
 
 ## What's Next
-- Run ingest Lambda to populate RDS with historical data
-- Test all API endpoints
-- ECS Fargate for the Streamlit dashboard
+- Possible hardening: restrict RDS security group (currently 0.0.0.0/0 on 5432), ALB + HTTPS for stable dashboard URL
 
 ## Environment
 Copy `.env.example` and fill in your values:
