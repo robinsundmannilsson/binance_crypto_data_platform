@@ -2,52 +2,24 @@
 
 import pulumi
 import pulumi_aws as aws
+import pulumi_docker as docker
 
 config = pulumi.Config()
 db_password = config.require_secret("db_password")
 
-vpc = aws.ec2.Vpc(
-    "crypto-data-platform-vpc",
-    cidr_block="10.0.0.0/16",
-    enable_dns_hostnames=True,
-    enable_dns_support=True,
-)
+default_vpc = aws.ec2.get_vpc(default=True)
+default_subnets = aws.ec2.get_subnets(filters=[{"name": "vpc-id", "values": [default_vpc.id]}])
 
-subnet_a = aws.ec2.Subnet(
-    "crypto-data-platform-subnet-a",
-    vpc_id=vpc.id,
-    cidr_block="10.0.1.0/24",
-    availability_zone="<AWS_REGION>a",
-)
-
-subnet_b = aws.ec2.Subnet(
-    "crypto-data-platform-subnet-b",
-    vpc_id=vpc.id,
-    cidr_block="10.0.2.0/24",
-    availability_zone="<AWS_REGION>b",
+rds_sg = aws.ec2.SecurityGroup(
+    "rds-sg",
+    vpc_id=default_vpc.id,
+    ingress=[{"from_port": 5432, "to_port": 5432, "protocol": "tcp", "cidr_blocks": ["0.0.0.0/0"]}],
+    egress=[{"from_port": 0, "to_port": 0, "protocol": "-1", "cidr_blocks": ["0.0.0.0/0"]}],
 )
 
 subnet_group = aws.rds.SubnetGroup(
-    "crypto-data-platform-subnet-group",
-    subnet_ids=[subnet_a.id, subnet_b.id],
-)
-
-rds_sg = aws.ec2.SecurityGroup(
-    "crypto-data-platform-rds-sg",
-    vpc_id=vpc.id,
-    description="Allow access to RDS",
-    ingress=[{
-        "from_port": 5432,
-        "to_port": 5432,
-        "protocol": "tcp",
-        "cidr_blocks": ["10.0.0.0/16"],
-    }],
-    egress=[{
-        "from_port": 0,
-        "to_port": 0,
-        "protocol": "-1",
-        "cidr_blocks": ["0.0.0.0/0"],
-    }],
+    "db-subnet-group",
+    subnet_ids=default_subnets.ids,
 )
 
 db = aws.rds.Instance(
@@ -62,7 +34,7 @@ db = aws.rds.Instance(
     db_subnet_group_name=subnet_group.name,
     vpc_security_group_ids=[rds_sg.id],
     skip_final_snapshot=True,
-    publicly_accessible=False,
+    publicly_accessible=True,
 )
 
 ingest_repo = aws.ecr.Repository(
@@ -75,6 +47,38 @@ api_repo = aws.ecr.Repository(
     "crypto-data-platform-api-repo",
     name="crypto-data-platform-api-repo",
     force_delete=True,
+)
+
+ecr_auth = aws.ecr.get_authorization_token_output()
+
+ingest_image = docker.Image(
+    "ingest-image",
+    build={
+        "context": "..",
+        "dockerfile": "dockerfile.ingest",
+        "platform": "linux/amd64",
+    },
+    image_name=ingest_repo.repository_url.apply(lambda url: f"{url}:latest"),
+    registry={
+        "server": ingest_repo.repository_url,
+        "username": ecr_auth.user_name,
+        "password": ecr_auth.password,
+    },
+)
+
+api_image = docker.Image(
+    "api-image",
+    build={
+        "context": "..",
+        "dockerfile": "dockerfile.api.lambda",
+        "platform": "linux/amd64",
+    },
+    image_name=api_repo.repository_url.apply(lambda url: f"{url}:latest"),
+    registry={
+        "server": api_repo.repository_url,
+        "username": ecr_auth.user_name,
+        "password": ecr_auth.password,
+    },
 )
 
 lambda_role = aws.iam.Role(
@@ -95,23 +99,13 @@ aws.iam.RolePolicyAttachment(
     policy_arn="arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole",
 )
 
-aws.iam.RolePolicyAttachment(
-    "lambda-vpc-execution",
-    role=lambda_role.name,
-    policy_arn="arn:aws:iam::aws:policy/service-role/AWSLambdaVPCAccessExecutionRole",
-)
-
 ingest_lambda = aws.lambda_.Function(
     "ingest-lambda",
     package_type="Image",
-    image_uri=ingest_repo.repository_url.apply(lambda url: f"{url}:latest"),
+    image_uri=ingest_image.image_name,
     role=lambda_role.arn,
     timeout=300,
     memory_size=512,
-    vpc_config={
-        "subnet_ids": [subnet_a.id, subnet_b.id],
-        "security_group_ids": [rds_sg.id],
-    },
     environment={
         "variables": {
             "DB_HOST": db.address,
@@ -130,14 +124,10 @@ ingest_lambda = aws.lambda_.Function(
 api_lambda = aws.lambda_.Function(
     "api-lambda",
     package_type="Image",
-    image_uri=api_repo.repository_url.apply(lambda url: f"{url}:latest"),
+    image_uri=api_image.image_name,
     role=lambda_role.arn,
     timeout=30,
     memory_size=512,
-    vpc_config={
-        "subnet_ids": [subnet_a.id, subnet_b.id],
-        "security_group_ids": [rds_sg.id],
-    },
     environment={
         "variables": {
             "DB_HOST": db.address,
